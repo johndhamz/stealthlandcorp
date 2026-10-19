@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createSessionClient } from "@/lib/supabase/server";
 import { PROPERTIES_TAG } from "@/lib/data/properties";
+import { ROOMS_TAG } from "@/lib/data/rooms";
 import type { ActionState } from "./auth";
 
 const SECTORS = ["residential", "hotel-leisure", "agriculture"];
@@ -87,6 +88,10 @@ export async function saveProperty(_prev: ActionState, formData: FormData): Prom
     mortgage_calculator: formData.get("mortgage_calculator") === "on",
     legacy_paths: lines(formData.get("legacy_paths")),
     sort_order: Number(formData.get("sort_order") ?? 0) || 0,
+    bookable: formData.get("bookable") === "on",
+    check_in_time: String(formData.get("check_in_time") ?? "").trim() || "2:00 PM",
+    check_out_time: String(formData.get("check_out_time") ?? "").trim() || "12:00 NN",
+    booking_notes: String(formData.get("booking_notes") ?? "").trim(),
   };
 
   const supabase = await createSessionClient();
@@ -97,6 +102,7 @@ export async function saveProperty(_prev: ActionState, formData: FormData): Prom
     return { error: error.message };
   }
   updateTag(PROPERTIES_TAG);
+  updateTag(ROOMS_TAG);
   redirect("/admin/properties?saved=1");
 }
 

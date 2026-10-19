@@ -4,7 +4,7 @@ import { ArrowRight, MapPin } from "lucide-react";
 import { sectors, statusLabels, type Property } from "@/data/properties";
 import { cn } from "@/lib/utils";
 
-export function PropertyCard({ property, priority = false, large = false }: { property: Property; priority?: boolean; large?: boolean }) {
+export function PropertyCard({ property, priority = false, large = false, fromRate }: { property: Property; priority?: boolean; large?: boolean; fromRate?: number }) {
   return (
     <Link
       href={`/properties/${property.slug}`}
@@ -36,7 +36,9 @@ export function PropertyCard({ property, priority = false, large = false }: { pr
         </p>
         <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-white/65">{property.summary}</p>
         <div className="mt-5 flex items-center justify-between border-t border-white/8 pt-4">
-          {property.unitTypes ? (
+          {fromRate ? (
+            <p className="text-xs text-white/55">From <span className="font-semibold text-gold-400">₱{fromRate.toLocaleString("en-PH")}</span> / night</p>
+          ) : property.unitTypes ? (
             <p className="text-xs text-white/55">{property.unitTypes.map((u) => u.label).join(" · ")}</p>
           ) : (
             <p className="text-xs text-white/55">{property.region}</p>

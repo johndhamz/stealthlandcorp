@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const sectorKeys = Object.keys(sectors) as Sector[];
 const statusKeys = Object.keys(statusLabels) as Status[];
 
-export function PropertyExplorer({ properties }: { properties: Property[] }) {
+export function PropertyExplorer({ properties, rates = {} }: { properties: Property[]; rates?: Record<string, number> }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -91,7 +91,7 @@ export function PropertyExplorer({ properties }: { properties: Property[] }) {
       {filtered.length > 0 ? (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p, i) => (
-            <PropertyCard key={p.slug} property={p} priority={i < 3} />
+            <PropertyCard key={p.slug} property={p} priority={i < 3} fromRate={rates[p.slug]} />
           ))}
         </div>
       ) : (

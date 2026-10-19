@@ -47,6 +47,14 @@ Studio runs on the port shown by `supabase status`. `npm run db:reset` re-applie
 - Public pages read through `src/lib/data/*` with `"use cache"`. Admin saves call `updateTag`, so edits appear on the site immediately.
 - Legacy URL redirects still come from `src/data/properties.ts` at build time; redirects added in the admin apply on the next deploy.
 
+## Hotel booking (request to book)
+
+Properties in the Hotel & Leisure sector can accept booking requests. Tick "Accept booking requests" on the property in the admin, then add room types under **Rooms** (name, nightly rate, max guests, inventory, photos). The property page then shows the room cards and a booking form.
+
+A request records the room, dates, guest count and contact details with an indicative total, and appears under **Bookings** in the admin with a reference like `NPR-AB12CD`. Your team confirms availability and payment with the guest by email and updates the status (requested, confirmed, declined, cancelled, completed).
+
+Emails are optional: with `RESEND_API_KEY` set, the team gets a notification and the guest gets an acknowledgement. Without it, requests are still saved. Online payment (PayMongo) and live availability are a planned second phase.
+
 ## Where things live
 
 | Path | What |
@@ -59,7 +67,9 @@ Studio runs on the port shown by `supabase status`. `npm run db:reset` re-applie
 | `src/app/admin/**` | Admin dashboard pages. |
 | `src/lib/admin/actions/*` | Server actions behind the admin forms (auth checked on every call). |
 | `src/lib/data/*` | Cached readers the public site uses, with seed-data fallback. |
-| `supabase/migrations` | Database schema, policies and storage bucket. |
+| `supabase/migrations` | Database schema, policies and storage bucket (includes room types and bookings). |
+| `src/components/booking/*` | Public room cards and booking form. |
+| `src/data/rooms.ts` | Placeholder room inventory used by the seed script and as fallback. |
 | `scripts/seed.ts` | Imports the seed data and creates the first admin. |
 | `next.config.ts` | Redirects from every old URL to the new structure. |
 | `public/images` | Property photography and renders. |

@@ -8,6 +8,7 @@ import { PropertyExplorer } from "@/components/properties/PropertyExplorer";
 import { regions } from "@/data/properties";
 import { getContent } from "@/lib/data/content";
 import { getPublishedProperties } from "@/lib/data/properties";
+import { getStartingRates } from "@/lib/data/rooms";
 
 export const metadata: Metadata = {
   title: "Properties",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PropertiesPage() {
-  const [properties, portfolio] = await Promise.all([getPublishedProperties(), getContent("portfolio")]);
+  const [properties, portfolio, rates] = await Promise.all([getPublishedProperties(), getContent("portfolio"), getStartingRates()]);
   const portfolioIntro = portfolio.intro;
   return (
     <>
@@ -23,7 +24,7 @@ export default async function PropertiesPage() {
 
       <section className="container-x py-16 lg:py-20">
         <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-white/5" />}>
-          <PropertyExplorer properties={properties} />
+          <PropertyExplorer properties={properties} rates={rates} />
         </Suspense>
       </section>
 

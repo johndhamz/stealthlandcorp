@@ -29,6 +29,11 @@ export interface Property {
   mortgageCalculator?: boolean;
   /** Old URLs that should redirect here. */
   legacyPaths?: string[];
+  /** Hotel booking (request to book). */
+  bookable?: boolean;
+  checkInTime?: string;
+  checkOutTime?: string;
+  bookingNotes?: string;
 }
 
 export const sectors: Record<Sector, { label: string; short: string; image: string; blurb: string; description: string[] }> = {
@@ -241,6 +246,43 @@ export const properties: Property[] = [
       "Forest, river and sea views",
     ],
     legacyPaths: ["/properties/agriculture/agricultural", "/properties/agriculture"],
+  },
+  {
+    slug: "napuro-resort-and-spa",
+    name: "Napuro Resort and Spa",
+    developer: "Stealth Land Corp",
+    tagline: "Unwind where the island meets the sea.",
+    sector: "hotel-leisure",
+    region: "Palawan",
+    location: "Palawan, Philippines",
+    status: "in-development",
+    featured: false,
+    cardImage: "/images/properties/hotel-leisure.jpg",
+    heroImages: ["/images/properties/hotel-leisure.jpg", "/images/properties/hotel/groove-towers.jpg"],
+    gallery: ["/images/properties/hotel-leisure.jpg", "/images/properties/hotel/groove-towers.jpg", "/images/properties/agriculture/agri-2.jpeg"],
+    summary:
+      "A boutique resort and spa by Stealth Land Corp. Choose a room, pick your dates and send a booking request. Our reservations team confirms by email.",
+    description: [
+      "Napuro Resort and Spa brings Stealth Land Corp's hospitality vision to life: a boutique retreat that pairs refined, contemporary rooms with the natural beauty of its island setting.",
+      "Guests can expect a full-service spa, pool, and dining that showcases local produce, with the warm, attentive service that turns a stay into a memory. Rooms, rates and photography shown here are placeholders and will be updated ahead of opening.",
+    ],
+    highlightTitle: "Rest, restore and reconnect",
+    highlights: [
+      "Every stay is designed around slow mornings and golden-hour evenings. Wake to garden or sea views, spend the day between the pool and the spa, and end it with dinner under the stars.",
+      "Booking is simple: pick your room and dates, tell us who is travelling, and our reservations team will confirm availability and payment details by email within one business day.",
+    ],
+    amenities: [
+      "Full-service spa and wellness pavilion",
+      "Outdoor pool and sun deck",
+      "Restaurant and poolside bar",
+      "Complimentary breakfast",
+      "Airport and pier transfers on request",
+      "Free Wi-Fi throughout the resort",
+    ],
+    bookable: true,
+    checkInTime: "2:00 PM",
+    checkOutTime: "12:00 NN",
+    bookingNotes: "Rates are indicative and confirmed by our reservations team. Children under 6 stay free when sharing with parents.",
   },
 ];
 

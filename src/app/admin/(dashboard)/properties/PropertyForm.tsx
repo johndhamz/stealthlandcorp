@@ -66,6 +66,15 @@ export function PropertyForm({ property }: { property?: AdminProperty }) {
         </div>
       </Card>
 
+      <Card title="Hotel booking" description="For Hotel & Leisure properties. Room types and rates are managed under Rooms.">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="bookable" defaultChecked={p?.bookable} className="size-4 accent-gold-500" /> Accept booking requests on this property&apos;s page</label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <Field id="check_in_time" label="Check-in time"><input id="check_in_time" name="check_in_time" defaultValue={p?.checkInTime ?? "2:00 PM"} className={input} /></Field>
+          <Field id="check_out_time" label="Check-out time"><input id="check_out_time" name="check_out_time" defaultValue={p?.checkOutTime ?? "12:00 NN"} className={input} /></Field>
+          <div className="sm:col-span-3"><Field id="booking_notes" label="Booking notes" hint="Shown under the indicative total on the booking form."><textarea id="booking_notes" name="booking_notes" rows={2} defaultValue={p?.bookingNotes} className={input} /></Field></div>
+        </div>
+      </Card>
+
       <Card title="Units, videos and redirects">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field id="unit_types" label="Unit types" hint="One per line as Label | sqm"><textarea id="unit_types" name="unit_types" rows={4} defaultValue={p?.unitTypes?.map((u) => `${u.label} | ${u.sqm}`).join("\n")} className={input} placeholder={"Studio | 32\n1 Bedroom | 40"} /></Field>

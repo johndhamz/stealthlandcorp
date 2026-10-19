@@ -15,6 +15,9 @@ import { InquiryForm } from "@/components/forms/InquiryForm";
 import { sectors, statusLabels } from "@/data/properties";
 import { getPublishedProperties, getPublishedProperty } from "@/lib/data/properties";
 import { projectOptions } from "@/lib/data/options";
+import { getRoomTypes } from "@/lib/data/rooms";
+import { RoomsSection } from "@/components/booking/RoomsSection";
+import { BookingForm } from "@/components/booking/BookingForm";
 import { site } from "@/data/site";
 
 export async function generateStaticParams() {
@@ -50,6 +53,7 @@ async function PropertyContent({ params }: Params) {
 
   const properties = await getPublishedProperties();
   const related = properties.filter((p) => p.slug !== property.slug).slice(0, 3);
+  const rooms = property.bookable ? await getRoomTypes(property.slug) : [];
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
@@ -82,7 +86,11 @@ async function PropertyContent({ params }: Params) {
               <MapPin className="size-4 text-gold-500" /> {property.location} · by {property.developer}
             </p>
             <div className="mt-8 flex animate-fade-up flex-wrap gap-3 [animation-delay:240ms]">
-              <a href="#inquire" className="inline-flex items-center gap-2 rounded-md bg-gold-500 px-7 py-3.5 font-display text-xs font-semibold uppercase tracking-[0.18em] text-navy-900 transition hover:bg-gold-400">Request a quote <ArrowRight className="size-4" /></a>
+              {rooms.length > 0 ? (
+                <a href="#rooms" className="inline-flex items-center gap-2 rounded-md bg-gold-500 px-7 py-3.5 font-display text-xs font-semibold uppercase tracking-[0.18em] text-navy-900 transition hover:bg-gold-400">Rooms &amp; booking <ArrowRight className="size-4" /></a>
+              ) : (
+                <a href="#inquire" className="inline-flex items-center gap-2 rounded-md bg-gold-500 px-7 py-3.5 font-display text-xs font-semibold uppercase tracking-[0.18em] text-navy-900 transition hover:bg-gold-400">Request a quote <ArrowRight className="size-4" /></a>
+              )}
               {property.mortgageCalculator && (
                 <a href="#calculator" className="inline-flex items-center gap-2 rounded-md border border-white/30 px-7 py-3.5 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm transition hover:border-gold-500 hover:text-gold-400">Mortgage calculator</a>
               )}
@@ -96,7 +104,11 @@ async function PropertyContent({ params }: Params) {
         <div className="container-x grid gap-6 py-6 sm:grid-cols-3">
           <Fact icon={MapPin} label="Location" value={`${property.location}, ${property.region}`} />
           <Fact icon={Building2} label="Sector" value={sectors[property.sector].label} />
-          <Fact icon={Ruler} label={property.unitTypes ? "Unit types" : "Status"} value={property.unitTypes ? property.unitTypes.map((u) => `${u.label} ${u.sqm} sqm`).join(" · ") : statusLabels[property.status]} />
+          <Fact
+            icon={Ruler}
+            label={property.unitTypes ? "Unit types" : rooms.length ? "Check-in / out" : "Status"}
+            value={property.unitTypes ? property.unitTypes.map((u) => `${u.label} ${u.sqm} sqm`).join(" · ") : rooms.length ? `${property.checkInTime ?? "2:00 PM"} / ${property.checkOutTime ?? "12:00 NN"}` : statusLabels[property.status]}
+          />
         </div>
       </section>
 
@@ -121,6 +133,16 @@ async function PropertyContent({ params }: Params) {
           </ul>
         </Reveal>
       </section>
+
+      {/* Rooms & booking */}
+      {rooms.length > 0 && (
+        <>
+          <RoomsSection rooms={rooms} propertyName={property.name} />
+          <section className="container-x py-20 lg:py-28">
+            <BookingForm propertySlug={property.slug} propertyName={property.name} rooms={rooms} checkInTime={property.checkInTime} checkOutTime={property.checkOutTime} notes={property.bookingNotes} />
+          </section>
+        </>
+      )}
 
       {/* Videos */}
       {property.videoIds?.length ? (

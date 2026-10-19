@@ -25,6 +25,10 @@ export interface PropertyRow {
   mortgage_calculator: boolean;
   legacy_paths: string[];
   sort_order: number;
+  bookable: boolean;
+  check_in_time: string;
+  check_out_time: string;
+  booking_notes: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -56,6 +60,10 @@ export function rowToProperty(r: PropertyRow): AdminProperty {
     videoIds: r.video_ids?.length ? r.video_ids : undefined,
     mortgageCalculator: r.mortgage_calculator,
     legacyPaths: r.legacy_paths?.length ? r.legacy_paths : undefined,
+    bookable: r.bookable,
+    checkInTime: r.check_in_time,
+    checkOutTime: r.check_out_time,
+    bookingNotes: r.booking_notes,
     sortOrder: r.sort_order,
     updatedAt: r.updated_at,
   };
@@ -86,5 +94,63 @@ export function propertyToRow(p: Property, extra: { published?: boolean; sortOrd
     mortgage_calculator: Boolean(p.mortgageCalculator),
     legacy_paths: p.legacyPaths ?? [],
     sort_order: extra.sortOrder ?? 0,
+    bookable: Boolean(p.bookable),
+    check_in_time: p.checkInTime ?? "2:00 PM",
+    check_out_time: p.checkOutTime ?? "12:00 NN",
+    booking_notes: p.bookingNotes ?? "",
+  };
+}
+
+export interface RoomTypeRow {
+  id: string;
+  property_id: string;
+  slug: string;
+  name: string;
+  description: string;
+  images: string[];
+  max_guests: number;
+  beds: string;
+  size_sqm: number | null;
+  nightly_rate: number;
+  quantity: number;
+  amenities: string[];
+  published: boolean;
+  sort_order: number;
+  updated_at?: string;
+}
+
+export interface RoomType {
+  id: string;
+  propertyId: string;
+  slug: string;
+  name: string;
+  description: string;
+  images: string[];
+  maxGuests: number;
+  beds: string;
+  sizeSqm: number | null;
+  nightlyRate: number;
+  quantity: number;
+  amenities: string[];
+  published: boolean;
+  sortOrder: number;
+}
+
+export function rowToRoomType(r: RoomTypeRow): RoomType {
+  return {
+    id: r.id,
+    propertyId: r.property_id,
+    slug: r.slug,
+    name: r.name,
+    description: r.description,
+    images: r.images ?? [],
+    maxGuests: r.max_guests,
+    beds: r.beds,
+    sizeSqm: r.size_sqm == null ? null : Number(r.size_sqm),
+    nightlyRate: Number(r.nightly_rate),
+    quantity: r.quantity,
+    amenities: r.amenities ?? [],
+    published: r.published,
+    sortOrder: r.sort_order,
   };
 }
