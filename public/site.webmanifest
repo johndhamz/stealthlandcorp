@@ -1,0 +1,9 @@
+{
+  "name": "Stealth Land Corp",
+  "short_name": "Stealth Land",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#272932",
+  "theme_color": "#272932",
+  "icons": [{ "src": "/icons/stealthLogo.png", "sizes": "299x105", "type": "image/png" }]
+}
