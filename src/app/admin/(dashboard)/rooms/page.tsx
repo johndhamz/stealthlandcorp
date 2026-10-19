@@ -1,10 +1,19 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { createSessionClient } from "@/lib/supabase/server";
 import { Badge, EmptyState, LinkButton, PageHeader, Table, Td, Th } from "@/components/admin/ui";
 import { formatPhp } from "@/lib/bookings";
 
-export default async function RoomsPage() {
+export default function RoomsPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-navy-900/10" />}>
+      <RoomsPageContent />
+    </Suspense>
+  );
+}
+
+async function RoomsPageContent() {
   const supabase = await createSessionClient();
   const { data } = await supabase
     .from("room_types")

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { createSessionClient } from "@/lib/supabase/server";
@@ -5,7 +6,15 @@ import { sectors, statusLabels, type Sector, type Status } from "@/data/properti
 import { Badge, EmptyState, LinkButton, PageHeader, Table, Td, Th, formatDate } from "@/components/admin/ui";
 import { PublishToggle } from "./PublishToggle";
 
-export default async function PropertiesAdminPage() {
+export default function PropertiesAdminPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-navy-900/10" />}>
+      <PropertiesAdminPageContent />
+    </Suspense>
+  );
+}
+
+async function PropertiesAdminPageContent() {
   const supabase = await createSessionClient();
   const { data } = await supabase
     .from("properties")

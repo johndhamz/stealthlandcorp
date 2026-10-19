@@ -1,9 +1,18 @@
+import { Suspense } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { Card, PageHeader, Table, Th, formatDate } from "@/components/admin/ui";
 import { CreateUserForm, UserRow } from "./UserForms";
 
-export default async function UsersPage() {
+export default function UsersPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-navy-900/10" />}>
+      <UsersPageContent />
+    </Suspense>
+  );
+}
+
+async function UsersPageContent() {
   const me = await requireAdmin();
   const supabase = await createSessionClient();
   const { data } = await supabase.from("profiles").select("id, email, full_name, role, created_at").order("created_at");

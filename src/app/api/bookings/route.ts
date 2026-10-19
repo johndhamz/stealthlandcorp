@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { updateTag } from "next/cache";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createAdminClient } from "@/lib/supabase/server";
 import { isIsoDate, makeReference, nightsBetween, formatPhp, formatStayDate } from "@/lib/bookings";
@@ -109,8 +108,6 @@ export async function POST(request: Request) {
     inserted = data;
   }
   if (!inserted) return NextResponse.json({ message: "We could not save your request. Please try again." }, { status: 500 });
-
-  updateTag("bookings");
 
   const notify = process.env.BOOKING_NOTIFY_EMAIL || "admin@stealthlandcorp.com";
   const summary = [

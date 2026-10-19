@@ -1,9 +1,18 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { createSessionClient } from "@/lib/supabase/server";
 import { Badge, EmptyState, LinkButton, PageHeader, Table, Td, Th, formatDate } from "@/components/admin/ui";
 
-export default async function AgentsPage() {
+export default function AgentsPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-navy-900/10" />}>
+      <AgentsPageContent />
+    </Suspense>
+  );
+}
+
+async function AgentsPageContent() {
   const supabase = await createSessionClient();
   const { data } = await supabase.from("agents").select("id, name, email, phone, company, territory, status, user_id, created_at").order("created_at", { ascending: false });
   return (
