@@ -4,13 +4,18 @@ import { useState, type FormEvent } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { countries, philippinePlaces, referralSources } from "@/data/site";
-import { properties } from "@/data/properties";
 import { cn } from "@/lib/utils";
 
 type Variant = "home" | "contact" | "property" | "agent" | "partner";
 
+export interface ProjectOption {
+  value: string;
+  label: string;
+}
+
 interface Props {
   variant?: Variant;
+  projects?: ProjectOption[];
   defaultProject?: string;
   defaultTopic?: string;
   title?: string;
@@ -21,7 +26,7 @@ interface Props {
 
 type Errors = Partial<Record<string, string>>;
 
-export function InquiryForm({ variant = "contact", defaultProject, defaultTopic, title, description, light, compact }: Props) {
+export function InquiryForm({ variant = "contact", projects = [], defaultProject, defaultTopic, title, description, light, compact }: Props) {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errors, setErrors] = useState<Errors>({});
   const [serverMessage, setServerMessage] = useState("");
@@ -162,8 +167,8 @@ export function InquiryForm({ variant = "contact", defaultProject, defaultTopic,
             <label htmlFor={`${variant}-project`} className={labelCls}>Project of interest</label>
             <select id={`${variant}-project`} name="project_interest" className={fieldClass} value={project} onChange={(e) => setProject(e.target.value)} aria-invalid={!!errors.project_interest}>
               <option value="">Select a project</option>
-              {properties.map((p) => (
-                <option key={p.slug} value={`${p.name} by Stealth Land Corp`}>{p.name} · {p.location}</option>
+              {projects.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
               ))}
               <option value="Others">Others</option>
               <option value="Not Applicable">Not applicable</option>

@@ -1,6 +1,9 @@
-# Stealth Land Corp — website
+# Stealth Land Corp — website and admin
 
-Next.js 16 rebuild of [stealthlandcorp.com](https://stealthlandcorp.com). App Router, TypeScript, Tailwind CSS v4, Cache Components enabled.
+Next.js 16 rebuild of [stealthlandcorp.com](https://stealthlandcorp.com) with a Supabase-backed admin dashboard. App Router, TypeScript, Tailwind CSS v4, Cache Components enabled.
+
+- Public site: `/`
+- Admin dashboard: `/admin` (properties, inquiries, site content, agents, users)
 
 ## Run
 
@@ -10,6 +13,40 @@ npm run dev      # http://localhost:3000
 npm run build && npm start
 ```
 
+## Supabase setup (admin dashboard)
+
+The public site works without Supabase: it falls back to the seed data in `src/data`. The admin dashboard, inquiries inbox and editable content need a Supabase project.
+
+### Hosted project (production)
+
+1. Create a project at supabase.com and copy the URL, anon key and service role key from Project Settings → API into `.env.local` (see `.env.example`).
+2. Apply the schema: `npx supabase link --project-ref <ref>` then `npm run db:push`. Or paste `supabase/migrations/*.sql` into the SQL editor.
+3. Seed the properties, content and first admin login:
+   ```bash
+   SEED_ADMIN_EMAIL=you@stealthlandcorp.com SEED_ADMIN_PASSWORD='choose-a-strong-one' npm run seed
+   ```
+4. Add the same three Supabase variables to your host (Vercel → Environment Variables). Only `NEXT_PUBLIC_*` keys reach the browser.
+5. Sign in at `/admin/login`.
+
+### Local development (Docker)
+
+```bash
+npm run db:start     # starts Postgres, Auth, Storage and Studio in Docker
+npx supabase status  # prints the local URL and keys for .env.local
+npm run seed
+npm run dev
+```
+
+Studio runs on the port shown by `supabase status`. `npm run db:reset` re-applies migrations and wipes local data.
+
+### How the pieces connect
+
+- `properties`, `site_content`, `inquiries`, `agents`, `profiles` tables with row-level security. Anyone can read published properties and site content; everything else needs an admin session.
+- The first user to sign up becomes an admin automatically. Later users default to the agent role unless created from the Users page.
+- Property images upload to the public `property-images` storage bucket from the browser (admin session required).
+- Public pages read through `src/lib/data/*` with `"use cache"`. Admin saves call `updateTag`, so edits appear on the site immediately.
+- Legacy URL redirects still come from `src/data/properties.ts` at build time; redirects added in the admin apply on the next deploy.
+
 ## Where things live
 
 | Path | What |
@@ -18,26 +55,24 @@ npm run build && npm start
 | `src/data/content.ts` | Page copy (home, about, agents, partner, legal). |
 | `src/data/site.ts` | Contact details, social links, navigation, form dropdown options. |
 | `src/lib/mortgage.ts` | Mortgage calculator constants (price per sqm, base fees, finish add-ons, USD rate). |
-| `src/app/api/inquiry/route.ts` | Receives form submissions and forwards them to the backend. |
+| `src/app/api/inquiry/route.ts` | Receives form submissions, stores them in Supabase and optionally forwards them to another backend. |
+| `src/app/admin/**` | Admin dashboard pages. |
+| `src/lib/admin/actions/*` | Server actions behind the admin forms (auth checked on every call). |
+| `src/lib/data/*` | Cached readers the public site uses, with seed-data fallback. |
+| `supabase/migrations` | Database schema, policies and storage bucket. |
+| `scripts/seed.ts` | Imports the seed data and creates the first admin. |
 | `next.config.ts` | Redirects from every old URL to the new structure. |
 | `public/images` | Property photography and renders. |
 
 ## Inquiries
 
-All forms (home, contact, property pages, agents, partner) POST to `/api/inquiry`, which validates and forwards to the backend endpoint. Configure in `.env.local`:
-
-```
-INQUIRY_API_URL=https://stlc-backend.onrender.com/api/v1/inquiry/property
-INQUIRY_API_KEY=            # optional bearer token
-```
-
-The forwarded JSON payload: `first_name, last_name, phone_number, email, country, place, project_interest, where_did_find_about_us, message, agree_newsletter, agree_terms, source`.
+All forms (home, contact, property pages, agents, partner) POST to `/api/inquiry`. The route validates the submission, saves it to the `inquiries` table and, when `INQUIRY_FORWARD_URL` is set, also forwards the JSON to that endpoint (for example the previous Render backend). Inquiries appear under `/admin/inquiries` with status tracking, notes, assignment and CSV export.
 
 ## Adding a property
 
-1. Drop images in `public/images/properties/<name>/`.
-2. Add an entry to the `properties` array in `src/data/properties.ts` (slug, sector, region, status, images, copy, amenities, optional `unitTypes`, `videoIds` and `mortgageCalculator`).
-3. Run `npm run build`. The detail page is statically generated.
+Use `/admin/properties/new`: upload images, fill in the copy, choose status and sector, and publish. The page, card, footer link and sitemap entry follow automatically.
+
+Without Supabase, add an entry to `src/data/properties.ts` instead and rebuild.
 
 ## Deploy
 

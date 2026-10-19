@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 import { properties } from "./src/data/properties";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseImageHosts = supabaseUrl
+  ? [{ protocol: new URL(supabaseUrl).protocol.replace(":", "") as "http" | "https", hostname: new URL(supabaseUrl).hostname, port: new URL(supabaseUrl).port || undefined }]
+  : [];
+
 const legacyRedirects = properties.flatMap((p) =>
   (p.legacyPaths ?? []).map((source) => ({ source, destination: `/properties/${p.slug}`, permanent: true })),
 );
@@ -18,7 +23,11 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: [{ protocol: "https", hostname: "i.ytimg.com" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "**.supabase.co" },
+      ...supabaseImageHosts,
+    ],
   },
   async redirects() {
     return [

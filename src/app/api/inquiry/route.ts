@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-
-/**
- * Forwards website inquiries to the Stealth Land backend.
- * Set INQUIRY_API_URL to override the destination; set INQUIRY_API_KEY to add a bearer token.
- */
-const DEFAULT_ENDPOINT = "https://stlc-backend.onrender.com/api/v1/inquiry/property";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createAdminClient } from "@/lib/supabase/server";
 
 interface Payload {
   first_name?: string;
@@ -24,6 +20,7 @@ interface Payload {
 }
 
 const str = (v: unknown, max = 500) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+const FAIL = { message: "We could not send your inquiry right now. Please email admin@stealthlandcorp.com." };
 
 export async function POST(request: Request) {
   let body: Payload;
@@ -33,12 +30,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
   }
 
-  if (body.website) {
-    // Honeypot filled in: silently accept.
-    return NextResponse.json({ ok: true });
-  }
+  if (body.website) return NextResponse.json({ ok: true }); // honeypot
 
-  const payload = {
+  const record = {
     first_name: str(body.first_name, 100),
     last_name: str(body.last_name, 100),
     phone_number: str(body.phone_number, 30),
@@ -53,25 +47,36 @@ export async function POST(request: Request) {
     source: str(body.variant, 30) || "website",
   };
 
-  const missing = (["first_name", "last_name", "email", "phone_number", "message"] as const).filter((k) => !payload[k]);
-  if (missing.length || !payload.agree_terms || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+  const missing = (["first_name", "last_name", "email", "phone_number", "message"] as const).filter((k) => !record[k]);
+  if (missing.length || !record.agree_terms || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
     return NextResponse.json({ message: "Please complete all required fields." }, { status: 422 });
   }
 
-  const endpoint = process.env.INQUIRY_API_URL || DEFAULT_ENDPOINT;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (process.env.INQUIRY_API_KEY) headers.Authorization = `Bearer ${process.env.INQUIRY_API_KEY}`;
-
-  try {
-    const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("Inquiry forward failed", res.status, text.slice(0, 300));
-      return NextResponse.json({ message: "We could not send your inquiry right now. Please email admin@stealthlandcorp.com." }, { status: 502 });
+  let saved = false;
+  if (isSupabaseConfigured() && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const { error } = await createAdminClient().from("inquiries").insert(record);
+      if (error) console.error("Inquiry insert failed", error.message);
+      else saved = true;
+    } catch (err) {
+      console.error("Inquiry insert error", err);
     }
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("Inquiry forward error", err);
-    return NextResponse.json({ message: "We could not send your inquiry right now. Please email admin@stealthlandcorp.com." }, { status: 502 });
   }
+
+  let forwarded = false;
+  const forwardUrl = process.env.INQUIRY_FORWARD_URL;
+  if (forwardUrl) {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (process.env.INQUIRY_FORWARD_KEY) headers.Authorization = `Bearer ${process.env.INQUIRY_FORWARD_KEY}`;
+    try {
+      const res = await fetch(forwardUrl, { method: "POST", headers, body: JSON.stringify(record), signal: AbortSignal.timeout(15_000) });
+      forwarded = res.ok;
+      if (!res.ok) console.error("Inquiry forward failed", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    } catch (err) {
+      console.error("Inquiry forward error", err);
+    }
+  }
+
+  if (!saved && !forwarded) return NextResponse.json(FAIL, { status: 502 });
+  return NextResponse.json({ ok: true });
 }
