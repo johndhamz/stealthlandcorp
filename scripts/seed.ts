@@ -8,6 +8,7 @@ import { properties } from "../src/data/properties";
 import { about, agentsPage, home, partnerPage, portfolioIntro } from "../src/data/content";
 import { propertyToRow } from "../src/lib/data/mappers";
 import { seedRooms } from "../src/data/rooms";
+import { seedActivities } from "../src/data/activities";
 
 if (existsSync(".env.local")) {
   for (const line of readFileSync(".env.local", "utf8").split("\n")) {
@@ -53,6 +54,33 @@ async function main() {
     const { error: rErr } = await supabase.from("room_types").upsert(roomRows, { onConflict: "property_id,slug", ignoreDuplicates: true });
     if (rErr) throw rErr;
     console.log(`Seeded ${roomRows.length} room types (existing rooms kept)`);
+  }
+
+  const activityRows = seedActivities
+    .filter((a) => idBySlug.has(a.propertySlug))
+    .map((a, i) => ({
+      property_id: idBySlug.get(a.propertySlug)!,
+      slug: a.slug,
+      name: a.name,
+      category: a.category,
+      tagline: a.tagline,
+      description: a.description,
+      images: a.images,
+      duration: a.duration,
+      schedule: a.schedule,
+      price: a.price,
+      price_unit: a.priceUnit,
+      min_pax: a.minPax,
+      max_pax: a.maxPax,
+      inclusions: a.inclusions,
+      notes: a.notes,
+      published: true,
+      sort_order: i,
+    }));
+  if (activityRows.length) {
+    const { error: aErr } = await supabase.from("activities").upsert(activityRows, { onConflict: "property_id,slug", ignoreDuplicates: true });
+    if (aErr) throw aErr;
+    console.log(`Seeded ${activityRows.length} activities (existing tours kept)`);
   }
 
   const content = [

@@ -16,8 +16,10 @@ import { sectors, statusLabels } from "@/data/properties";
 import { getPublishedProperties, getPublishedProperty } from "@/lib/data/properties";
 import { projectOptions } from "@/lib/data/options";
 import { getRoomTypes } from "@/lib/data/rooms";
+import { getActivities } from "@/lib/data/activities";
 import { RoomsSection } from "@/components/booking/RoomsSection";
-import { BookingForm } from "@/components/booking/BookingForm";
+import { ActivitiesSection } from "@/components/booking/ActivitiesSection";
+import { BookingPanel } from "@/components/booking/BookingPanel";
 import { site } from "@/data/site";
 
 export async function generateStaticParams() {
@@ -53,7 +55,7 @@ async function PropertyContent({ params }: Params) {
 
   const properties = await getPublishedProperties();
   const related = properties.filter((p) => p.slug !== property.slug).slice(0, 3);
-  const rooms = property.bookable ? await getRoomTypes(property.slug) : [];
+  const [rooms, activities] = property.bookable ? await Promise.all([getRoomTypes(property.slug), getActivities(property.slug)]) : [[], []];
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
@@ -134,14 +136,13 @@ async function PropertyContent({ params }: Params) {
         </Reveal>
       </section>
 
-      {/* Rooms & booking */}
-      {rooms.length > 0 && (
-        <>
-          <RoomsSection rooms={rooms} propertyName={property.name} />
-          <section className="container-x py-20 lg:py-28">
-            <BookingForm propertySlug={property.slug} propertyName={property.name} rooms={rooms} checkInTime={property.checkInTime} checkOutTime={property.checkOutTime} notes={property.bookingNotes} />
-          </section>
-        </>
+      {/* Rooms, activities & booking */}
+      {rooms.length > 0 && <RoomsSection rooms={rooms} propertyName={property.name} />}
+      {activities.length > 0 && <ActivitiesSection activities={activities} propertyName={property.name} hasRooms={rooms.length > 0} />}
+      {(rooms.length > 0 || activities.length > 0) && (
+        <section className="container-x py-20 lg:py-28">
+          <BookingPanel propertySlug={property.slug} propertyName={property.name} rooms={rooms} activities={activities} checkInTime={property.checkInTime} checkOutTime={property.checkOutTime} notes={property.bookingNotes} />
+        </section>
       )}
 
       {/* Videos */}

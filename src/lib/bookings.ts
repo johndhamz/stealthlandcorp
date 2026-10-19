@@ -35,3 +35,15 @@ export function formatPhp(n: number) {
 export function formatStayDate(iso: string) {
   return new Intl.DateTimeFormat("en-PH", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 }
+
+export const BOOKING_KINDS = ["stay", "activity"] as const;
+export type BookingKind = (typeof BOOKING_KINDS)[number];
+
+/** Price of one activity line: per-person rates multiply by head count, group rates are flat. */
+export function activitySubtotal(price: number, priceUnit: "person" | "group", pax: number) {
+  return priceUnit === "group" ? price : price * Math.max(pax, 0);
+}
+
+export function priceUnitLabel(priceUnit: "person" | "group") {
+  return priceUnit === "group" ? "per boat" : "per person";
+}

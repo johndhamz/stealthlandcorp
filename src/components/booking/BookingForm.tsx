@@ -1,59 +1,78 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
-import type { RoomType } from "@/lib/data/mappers";
-import { formatPhp, formatStayDate, nightsBetween } from "@/lib/bookings";
+import type { Activity, RoomType } from "@/lib/data/mappers";
+import { activitySubtotal, formatPhp, formatStayDate, nightsBetween } from "@/lib/bookings";
+import { ActivityPicker, activitiesTotal, selectionsToPayload, type ActivitySelections } from "./ActivityPicker";
+import { ContactFields, Honeypot, TermsCheckbox, isoPlus, labelCls } from "./fields";
 
 interface Props {
   propertySlug: string;
   propertyName: string;
   rooms: RoomType[];
+  activities?: Activity[];
   checkInTime?: string;
   checkOutTime?: string;
   notes?: string;
+  /** Room pre-selected by a card click that happened while this form was not mounted. */
+  initialRoomId?: string;
+  /** Activity pre-ticked by a card click that happened while this form was not mounted. */
+  initialActivityId?: string;
 }
 
-function isoPlus(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, checkOutTime, notes }: Props) {
-  const [roomId, setRoomId] = useState(rooms[0]?.id ?? "");
-  const [checkIn, setCheckIn] = useState(isoPlus(7));
-  const [checkOut, setCheckOut] = useState(isoPlus(9));
+export function BookingForm({ propertySlug, propertyName, rooms, activities = [], checkInTime, checkOutTime, notes, initialRoomId, initialActivityId }: Props) {
+  const [roomId, setRoomId] = useState(initialRoomId && rooms.some((r) => r.id === initialRoomId) ? initialRoomId : (rooms[0]?.id ?? ""));
+  // Dates start empty on the server and are filled from the visitor's own clock after hydration,
+  // so a guest in Manila sees today's date even though the server renders in UTC.
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing with the browser clock (external system)
+    setCheckIn(isoPlus(0));
+    setCheckOut(isoPlus(1));
+  }, []);
   const [guests, setGuests] = useState(2);
   const [roomCount, setRoomCount] = useState(1);
+  const [selected, setSelected] = useState<ActivitySelections>(() => {
+    const a = activities.find((x) => x.id === initialActivityId);
+    return a ? { [a.id]: { pax: Math.min(Math.max(2, a.minPax), a.maxPax), date: "" } } : {};
+  });
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<{ reference: string; total: number; nights: number } | null>(null);
 
   const room = rooms.find((r) => r.id === roomId) ?? rooms[0];
   const nights = nightsBetween(checkIn, checkOut);
-  const total = room ? room.nightlyRate * Math.max(nights, 0) * roomCount : 0;
+  const roomTotal = room ? room.nightlyRate * Math.max(nights, 0) * roomCount : 0;
+  const addOnsTotal = activitiesTotal(activities, selected);
+  const total = roomTotal + addOnsTotal;
   const tooManyGuests = room ? guests > room.maxGuests * roomCount : false;
+  const chosenActivities = activities.filter((a) => selected[a.id]);
 
-  // "Request to book" buttons on the room cards pre-select that room.
+  // "Request to book" / "Add to my stay" buttons on the cards pre-select that room or tour.
   useEffect(() => {
     const onClick = (e: Event) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>(".book-room");
-      if (!el?.dataset.room) return;
-      e.preventDefault();
-      setRoomId(el.dataset.room);
+      const target = e.target as HTMLElement;
+      const roomEl = target.closest<HTMLElement>(".book-room");
+      const actEl = target.closest<HTMLElement>(".add-activity");
+      if (roomEl?.dataset.room) {
+        e.preventDefault();
+        setRoomId(roomEl.dataset.room);
+      } else if (actEl?.dataset.activity) {
+        e.preventDefault();
+        const a = activities.find((x) => x.id === actEl.dataset.activity);
+        if (a) setSelected((prev) => (prev[a.id] ? prev : { ...prev, [a.id]: { pax: Math.min(Math.max(guests, a.minPax), a.maxPax), date: "" } }));
+      } else return;
       document.getElementById("book")?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, []);
+  }, [activities, guests]);
 
-  const minCheckOut = useMemo(() => {
-    const d = new Date(`${checkIn}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + 1);
-    return d.toISOString().slice(0, 10);
-  }, [checkIn]);
+  const minCheckOut = useMemo(() => (checkIn ? isoPlus(1, checkIn) : ""), [checkIn]);
+  // Tours happen on a day of the stay: from check-in up to the last night.
+  const tourDates = useMemo(() => (checkIn && checkOut ? { min: checkIn, max: isoPlus(-1, checkOut) < checkIn ? checkIn : isoPlus(-1, checkOut), initial: checkIn } : undefined), [checkIn, checkOut]);
 
   async function onSubmit(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
@@ -67,12 +86,14 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          kind: "stay",
           property_slug: propertySlug,
           room_type_id: room.id,
           check_in: checkIn,
           check_out: checkOut,
           guests,
           rooms: roomCount,
+          activities: selectionsToPayload(selected, checkIn),
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
@@ -96,7 +117,7 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
 
   if (status === "success" && result && room) {
     return (
-      <div id="book" className="scroll-mt-24 rounded-2xl border border-gold-500/30 bg-navy-900 p-8 text-center">
+      <div className="rounded-2xl border border-gold-500/30 bg-navy-900 p-8 text-center">
         <CheckCircle2 className="mx-auto size-10 text-gold-500" />
         <h3 className="mt-4 font-display text-2xl font-bold">Request received</h3>
         <p className="mt-2 text-white/70">Your reference is</p>
@@ -104,6 +125,9 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
         <div className="mx-auto mt-6 max-w-md rounded-lg border border-white/10 bg-white/[0.03] p-4 text-left text-sm text-white/80">
           <p><strong>{room.name}</strong> × {roomCount} · {guests} {guests === 1 ? "guest" : "guests"}</p>
           <p className="mt-1">{formatStayDate(checkIn)} → {formatStayDate(checkOut)} · {result.nights} {result.nights === 1 ? "night" : "nights"}</p>
+          {chosenActivities.map((a) => (
+            <p key={a.id} className="mt-1">+ {a.name} · {selected[a.id].pax} {selected[a.id].pax === 1 ? "guest" : "guests"}{selected[a.id].date ? ` · ${formatStayDate(selected[a.id].date)}` : ""}</p>
+          ))}
           <p className="mt-1">Indicative total: <strong className="text-gold-400">{formatPhp(result.total)}</strong></p>
         </div>
         <p className="mx-auto mt-6 max-w-md text-sm text-white/65">
@@ -116,10 +140,8 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
     );
   }
 
-  const labelCls = "mb-1.5 block text-xs font-medium text-white/70";
-
   return (
-    <div id="book" className="scroll-mt-24 grid gap-8 rounded-2xl border border-white/10 bg-navy-900 p-6 sm:p-8 lg:grid-cols-[1.2fr_1fr]">
+    <div className="grid gap-8 rounded-2xl border border-white/10 bg-navy-900 p-6 sm:p-8 lg:grid-cols-[1.2fr_1fr]">
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <div>
           <p className="eyebrow mb-2">Request to book</p>
@@ -141,11 +163,7 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
             <input id="bk-in" type="date" value={checkIn} min={isoPlus(0)} onChange={(e) => {
                 const v = e.target.value;
                 setCheckIn(v);
-                if (checkOut <= v) {
-                  const d = new Date(`${v}T00:00:00Z`);
-                  d.setUTCDate(d.getUTCDate() + 1);
-                  setCheckOut(d.toISOString().slice(0, 10));
-                }
+                if (checkOut <= v) setCheckOut(isoPlus(1, v));
               }} className="field [color-scheme:dark]" required />
           </div>
           <div>
@@ -169,37 +187,22 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
           <p className="text-xs text-gold-400">{room.name} sleeps up to {room.maxGuests} per room. Add a room or pick a larger room type.</p>
         )}
 
+        {activities.length > 0 && (
+          <div>
+            <p className={labelCls}>Island hopping & activities (optional)</p>
+            <ActivityPicker activities={activities} selected={selected} onChange={setSelected} defaultPax={guests} dates={tourDates} idPrefix="bk" />
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="bk-first" className={labelCls}>First name</label>
-            <input id="bk-first" name="first_name" autoComplete="given-name" required className="field" placeholder="Juan" />
-          </div>
-          <div>
-            <label htmlFor="bk-last" className={labelCls}>Last name</label>
-            <input id="bk-last" name="last_name" autoComplete="family-name" required className="field" placeholder="Dela Cruz" />
-          </div>
-          <div>
-            <label htmlFor="bk-email" className={labelCls}>Email</label>
-            <input id="bk-email" name="email" type="email" autoComplete="email" required className="field" placeholder="you@example.com" />
-          </div>
-          <div>
-            <label htmlFor="bk-phone" className={labelCls}>Phone</label>
-            <input id="bk-phone" name="phone" type="tel" autoComplete="tel" required className="field" placeholder="+63 917 000 0000" />
-          </div>
+          <ContactFields prefix="bk" />
           <div className="sm:col-span-2">
             <label htmlFor="bk-req" className={labelCls}>Special requests (optional)</label>
             <textarea id="bk-req" name="special_requests" rows={3} className="field" placeholder="Arrival time, dietary needs, celebrations..." />
           </div>
         </div>
-        <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-
-        <label className="flex cursor-pointer items-start gap-2.5 text-xs text-white/70">
-          <input type="checkbox" name="agree_terms" required className="mt-0.5 size-4 shrink-0 accent-gold-500" />
-          <span>
-            I agree to the <Link href="/privacy-policy" className="text-gold-500 underline-offset-2 hover:underline">Privacy Policy</Link> and{" "}
-            <Link href="/terms-of-use" className="text-gold-500 underline-offset-2 hover:underline">Terms of Use</Link>.
-          </span>
-        </label>
+        <Honeypot />
+        <TermsCheckbox />
 
         {status === "error" && <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{message}</p>}
 
@@ -214,11 +217,15 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
         {room && (
           <dl className="mt-5 space-y-3 text-sm">
             <Row k="Room" v={`${room.name} × ${roomCount}`} />
-            <Row k="Check-in" v={`${formatStayDate(checkIn)}${checkInTime ? ` · ${checkInTime}` : ""}`} />
-            <Row k="Check-out" v={`${formatStayDate(checkOut)}${checkOutTime ? ` · ${checkOutTime}` : ""}`} />
+            <Row k="Check-in" v={checkIn ? `${formatStayDate(checkIn)}${checkInTime ? ` · ${checkInTime}` : ""}` : "—"} />
+            <Row k="Check-out" v={checkOut ? `${formatStayDate(checkOut)}${checkOutTime ? ` · ${checkOutTime}` : ""}` : "—"} />
             <Row k="Nights" v={String(Math.max(nights, 0))} />
             <Row k="Guests" v={String(guests)} />
             <Row k="Rate" v={`${formatPhp(room.nightlyRate)} / room / night`} />
+            {chosenActivities.length > 0 && <Row k="Room subtotal" v={formatPhp(roomTotal)} />}
+            {chosenActivities.map((a) => (
+              <Row key={a.id} k={`${a.name} × ${selected[a.id].pax}`} v={formatPhp(activitySubtotal(a.price, a.priceUnit, selected[a.id].pax))} />
+            ))}
           </dl>
         )}
         <div className="mt-6 border-t border-white/10 pt-5">
@@ -231,7 +238,7 @@ export function BookingForm({ propertySlug, propertyName, rooms, checkInTime, ch
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+export function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
       <dt className="text-white/60">{k}</dt>

@@ -154,3 +154,69 @@ export function rowToRoomType(r: RoomTypeRow): RoomType {
     sortOrder: r.sort_order,
   };
 }
+
+export interface ActivityRow {
+  id: string;
+  property_id: string;
+  slug: string;
+  name: string;
+  category: string;
+  tagline: string;
+  description: string;
+  images: string[];
+  duration: string;
+  schedule: string;
+  price: number;
+  price_unit: "person" | "group";
+  min_pax: number;
+  max_pax: number;
+  inclusions: string[];
+  notes: string;
+  published: boolean;
+  sort_order: number;
+  updated_at?: string;
+}
+
+export interface Activity {
+  id: string;
+  propertyId: string;
+  slug: string;
+  name: string;
+  category: string;
+  tagline: string;
+  description: string;
+  images: string[];
+  duration: string;
+  schedule: string;
+  price: number;
+  priceUnit: "person" | "group";
+  minPax: number;
+  maxPax: number;
+  inclusions: string[];
+  notes: string;
+  published: boolean;
+  sortOrder: number;
+}
+
+export function rowToActivity(r: ActivityRow): Activity {
+  return {
+    id: r.id,
+    propertyId: r.property_id,
+    slug: r.slug,
+    name: r.name,
+    category: r.category ?? "",
+    tagline: r.tagline,
+    description: r.description,
+    images: r.images ?? [],
+    duration: r.duration,
+    schedule: r.schedule,
+    price: Number(r.price),
+    priceUnit: r.price_unit === "group" ? "group" : "person",
+    minPax: r.min_pax,
+    maxPax: r.max_pax,
+    inclusions: r.inclusions ?? [],
+    notes: r.notes,
+    published: r.published,
+    sortOrder: r.sort_order,
+  };
+}

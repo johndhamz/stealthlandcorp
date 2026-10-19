@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BedDouble, Building2, CalendarCheck, FileText, Inbox, LayoutDashboard, LogOut, Menu, Users, UserRound, X, ExternalLink } from "lucide-react";
+import { BedDouble, Building2, CalendarCheck, FileText, Inbox, LayoutDashboard, LogOut, Menu, Users, UserRound, X, ExternalLink, Sailboat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CurrentUser } from "@/lib/auth";
 
@@ -13,6 +13,7 @@ const nav = [
   { href: "/admin/properties", label: "Properties", icon: Building2 },
   { href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
   { href: "/admin/rooms", label: "Rooms", icon: BedDouble },
+  { href: "/admin/activities", label: "Activities", icon: Sailboat },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
   { href: "/admin/content", label: "Site content", icon: FileText },
   { href: "/admin/agents", label: "Agents", icon: UserRound },
