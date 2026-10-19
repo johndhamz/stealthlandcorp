@@ -97,10 +97,10 @@ export const seedActivities: SeedActivity[] = [
 const elNidoInclusions = ["Shared outrigger boat", "Licensed tour guide", "Lunch cooked on board", "Snorkel mask and life vest", "Drinking water"];
 const elNidoNotes =
   "El Nido is about three hours by van from Roxas; transfers can be arranged on request. The El Nido Eco-Tourism Development Fee (valid 10 days), lagoon entrance and kayak hire are paid locally and not included.";
-const elNido = (t: Pick<SeedActivity, "slug" | "name" | "tagline" | "description" | "duration" | "schedule" | "price">): SeedActivity => ({
+const en = (f: string) => `/images/activities/el-nido/${f}.jpg`;
+const elNido = (t: Pick<SeedActivity, "slug" | "name" | "tagline" | "description" | "duration" | "schedule" | "price" | "images">): SeedActivity => ({
   propertySlug: "napuro-resort-and-spa",
   category: "El Nido tours",
-  images: [],
   priceUnit: "person",
   minPax: 1,
   maxPax: 15,
@@ -112,6 +112,7 @@ const elNido = (t: Pick<SeedActivity, "slug" | "name" | "tagline" | "description
 seedActivities.push(
   elNido({
     slug: "el-nido-tour-a",
+    images: [en("big-lagoon-1"), en("shimizu"), en("seven-commandos")],
     name: "El Nido Tour A · Lagoons & Beaches",
     tagline: "Big or Small Lagoon · Secret Lagoon · Shimizu Island · 7 Commandos Beach",
     description: "El Nido’s signature route. Kayak the limestone-walled Big Lagoon (or Small Lagoon, assigned daily), slip through a rock crevice into Secret Lagoon, lunch on Shimizu Island and end the day on 7 Commandos Beach.",
@@ -121,6 +122,7 @@ seedActivities.push(
   }),
   elNido({
     slug: "el-nido-tour-b",
+    images: [en("snake-island-1"), en("snake-island-2"), en("pinagbuyutan")],
     name: "El Nido Tour B · Caves & Islands",
     tagline: "Snake Island · Cudugnon Cave · Cathedral Cave · Pinagbuyutan Island · Entalula Beach",
     description: "Walk the S-shaped sandbar of Snake Island at low tide, crawl into Cudugnon Cave, pass the towering Cathedral Cave by boat, and swim off Pinagbuyutan Island and Entalula Beach.",
@@ -130,6 +132,7 @@ seedActivities.push(
   }),
   elNido({
     slug: "el-nido-tour-c",
+    images: [en("matinloc-view"), en("matinloc-island"), en("helicopter-2"), en("matinloc-shrine")],
     name: "El Nido Tour C · Hidden Beaches & Shrine",
     tagline: "Hidden Beach · Secret Beach · Matinloc Shrine · Helicopter Island · Star Beach",
     description: "The most dramatic scenery in Bacuit Bay. Swim through a narrow gap into Secret Beach, explore Hidden Beach and the Matinloc Shrine viewpoint, then snorkel at Helicopter Island and Star Beach.",
@@ -139,6 +142,7 @@ seedActivities.push(
   }),
   elNido({
     slug: "el-nido-tour-d",
+    images: [en("cadlao-paradise"), en("cadlao-kayak"), en("cadlao-natnat")],
     name: "El Nido Tour D · Cadlao Lagoon & Beaches",
     tagline: "Cadlao Lagoon · Paradise Beach · Pasandigan Beach · Natnat Beach · Bukal Beach",
     description: "The relaxed route closest to town. Short boat rides to the shallow Cadlao Lagoon and a string of quiet beaches on Cadlao Island, with plenty of swimming and snorkelling time.",

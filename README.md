@@ -91,3 +91,7 @@ Without Supabase, add an entry to `src/data/properties.ts` instead and rebuild.
 ## Deploy
 
 Works on Vercel out of the box. For other hosts run `npm run build` then `npm start`, or add `output: "standalone"` to `next.config.ts`.
+
+## Photo credits
+
+The El Nido tour photos in `public/images/activities/el-nido` are from Wikimedia Commons under CC BY / CC BY-SA / CC0 licences; authors and links are listed in `public/images/activities/el-nido/CREDITS.md`. Roxas island hopping photos were supplied by the client.
