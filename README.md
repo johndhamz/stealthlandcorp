@@ -94,4 +94,4 @@ Works on Vercel out of the box. For other hosts run `npm run build` then `npm st
 
 ## Photo credits
 
-The El Nido tour photos in `public/images/activities/el-nido` are from Wikimedia Commons under CC BY / CC BY-SA / CC0 licences; authors and links are listed in `public/images/activities/el-nido/CREDITS.md`. Roxas island hopping photos were supplied by the client.
+The El Nido tour photos in `public/images/activities/el-nido` and the room photos in `public/images/rooms/napuro` are from Wikimedia Commons under CC BY / CC BY-SA / CC0 licences; authors and links are listed in the `CREDITS.md` file in each folder. Roxas island hopping photos were supplied by the client.

@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { BedDouble, Maximize2, Users } from "lucide-react";
+import { TourGallery } from "./TourGallery";
 import type { RoomType } from "@/lib/data/mappers";
 import { formatPhp } from "@/lib/bookings";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -13,21 +13,15 @@ export function RoomsSection({ rooms, propertyName }: { rooms: RoomType[]; prope
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           {rooms.map((room, i) => (
             <Reveal key={room.id} delay={i * 80} className="group flex flex-col overflow-hidden rounded-xl border border-white/8 bg-navy-800 transition hover:border-gold-500/40">
-              <div className="relative aspect-[16/9] overflow-hidden">
-                {room.images[0] ? (
-                  <Image src={room.images[0]} alt={room.name} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover transition duration-700 group-hover:scale-105" unoptimized={room.images[0].startsWith("http://")} />
-                ) : (
-                  <div className="absolute inset-0 bg-navy-700" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
+              <TourGallery images={room.images} name={room.name}>
+                <div className="flex items-end justify-between gap-4">
                   <h3 className="font-display text-xl font-bold">{room.name}</h3>
                   <p className="shrink-0 text-right">
                     <span className="font-display text-lg font-bold text-gold-400">{formatPhp(room.nightlyRate)}</span>
                     <span className="block text-[11px] text-white/60">per night</span>
                   </p>
                 </div>
-              </div>
+              </TourGallery>
               <div className="flex flex-1 flex-col p-5 sm:p-6">
                 <p className="text-sm leading-relaxed text-white/70">{room.description}</p>
                 <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/60">
