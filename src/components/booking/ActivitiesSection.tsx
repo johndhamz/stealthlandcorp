@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Clock, Sailboat, Users } from "lucide-react";
+import { TourGallery } from "./TourGallery";
 import type { Activity } from "@/lib/data/mappers";
 import { formatPhp, priceUnitLabel } from "@/lib/bookings";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -54,16 +54,8 @@ function slugId(s: string) {
 function ActivityCard({ a, delay, hasRooms }: { a: Activity; delay: number; hasRooms: boolean }) {
   return (
     <Reveal delay={delay} className="group flex flex-col overflow-hidden rounded-xl border border-white/8 bg-navy-900 transition hover:border-gold-500/40">
-      <div className="relative aspect-[16/9] overflow-hidden">
-        {a.images[0] ? (
-          <Image src={a.images[0]} alt={a.name} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover transition duration-700 group-hover:scale-105" unoptimized={a.images[0].startsWith("http://")} />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-navy-700 via-navy-800 to-navy-950">
-            <Sailboat className="size-14 text-gold-500/30" aria-hidden="true" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/10 to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
+      <TourGallery images={a.images} name={a.name}>
+        <div className="flex items-end justify-between gap-4">
           <div>
             <h3 className="font-display text-xl font-bold">{a.name}</h3>
             {a.tagline && <p className="mt-0.5 text-xs text-white/70">{a.tagline}</p>}
@@ -73,7 +65,7 @@ function ActivityCard({ a, delay, hasRooms }: { a: Activity; delay: number; hasR
             <span className="block text-[11px] text-white/60">{priceUnitLabel(a.priceUnit)}</span>
           </p>
         </div>
-      </div>
+      </TourGallery>
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         <p className="text-sm leading-relaxed text-white/70">{a.description}</p>
         <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/60">
