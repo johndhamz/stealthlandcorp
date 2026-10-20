@@ -57,7 +57,7 @@ A request records the room, dates, guest count and contact details with an indic
 
 Tours live under **Activities** in the admin (name, section used to group tours on the page, price per person or flat per boat, min/max guests, duration, schedule, inclusions, photos). Published tours appear on the resort page below the rooms. Guests can either tick tours as add-ons on the room booking form (each with a head count and a date inside the stay) or use the **Island hopping only** tab to request a day tour without a room. Both go into **Bookings**; tour-only requests are marked "Tour only" and the booking detail lists each tour with its subtotal. The seed script ships Roxas Tours A, B and C plus El Nido Tours A to D for Napuro Resort and Spa with proxy rates and the photos in `public/images/activities/napuro`.
 
-Emails are optional: with `RESEND_API_KEY` set, the team gets a notification and the guest gets an acknowledgement. Without it, requests are still saved. Online payment (PayMongo) and live availability are a planned second phase.
+Emails are optional when Supabase is configured: with `RESEND_API_KEY` set, the team gets a notification and the guest gets an acknowledgement; without it, requests are still saved. **Email-only mode:** if Supabase is not configured but `RESEND_API_KEY` is, requests are validated against the built-in seed rooms and tours and emailed to `BOOKING_NOTIFY_EMAIL` (nothing is stored and the admin stays off). With neither, the form shows a friendly "not available" message. Online payment (PayMongo) and live availability are a planned second phase.
 
 ## Where things live
 

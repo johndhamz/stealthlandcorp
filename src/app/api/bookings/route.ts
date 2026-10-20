@@ -3,6 +3,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createAdminClient } from "@/lib/supabase/server";
 import { activitySubtotal, isIsoDate, makeReference, nightsBetween, formatPhp, formatStayDate, priceUnitLabel } from "@/lib/bookings";
 import { sendEmail } from "@/lib/email";
+import { properties as seedProperties } from "@/data/properties";
+import { seedRooms } from "@/data/rooms";
+import { seedActivities } from "@/data/activities";
 
 interface ActivityInput {
   activity_id?: string;
@@ -53,7 +56,10 @@ export async function POST(request: Request) {
   }
   if (body.website) return NextResponse.json({ ok: true, reference: makeReference() });
 
-  if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // With Supabase the request is stored and emailed. Without it ("email-only mode") the request is
+  // validated against the built-in seed catalogue and emailed only, which needs an email provider.
+  const hasDb = isSupabaseConfigured() && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!hasDb && !process.env.RESEND_API_KEY) {
     return fail("Online booking requests are not available right now. Please email admin@stealthlandcorp.com.", 503);
   }
 
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
   if (!body.agree_terms) return fail("Please accept the Privacy Policy and Terms of Use.");
 
   const today = new Date().toISOString().slice(0, 10);
-  const admin = createAdminClient();
+  const admin = hasDb ? createAdminClient() : null;
 
   // --- Stay details (room request) or tour date (activity-only request) ---
   interface RoomLite { id: string; name: string; max_guests: number; nightly_rate: number; property_id: string }
@@ -95,12 +101,21 @@ export async function POST(request: Request) {
     if (checkIn < today) return fail("Check-in date cannot be in the past.");
     if (!guests) return fail("Tell us how many guests are staying.");
 
-    const { data } = await admin
-      .from("room_types")
-      .select("id, name, max_guests, nightly_rate, published, property_id, properties!inner(id, slug, name, bookable)")
-      .eq("id", str(body.room_type_id, 60))
-      .maybeSingle();
-    const r = data as unknown as (RoomLite & { published: boolean; properties?: PropLite }) | null;
+    const roomId = str(body.room_type_id, 60);
+    let r: (RoomLite & { published: boolean; properties?: PropLite }) | null = null;
+    if (admin) {
+      const { data } = await admin
+        .from("room_types")
+        .select("id, name, max_guests, nightly_rate, published, property_id, properties!inner(id, slug, name, bookable)")
+        .eq("id", roomId)
+        .maybeSingle();
+      r = data as unknown as typeof r;
+    } else {
+      // Seed rooms are keyed by slug (see getRoomTypes fallback).
+      const sr = seedRooms.find((x) => x.slug === roomId && x.propertySlug === propertySlug);
+      const sp = seedProperties.find((x) => x.slug === propertySlug);
+      if (sr && sp) r = { id: sr.slug, name: sr.name, max_guests: sr.maxGuests, nightly_rate: sr.nightlyRate, property_id: sp.slug, published: true, properties: { id: sp.slug, slug: sp.slug, name: sp.name, bookable: Boolean(sp.bookable) } };
+    }
     if (!r || !r.published || !r.properties?.bookable || r.properties.slug !== propertySlug) return fail("That room is not available for booking requests.");
     if (guests > r.max_guests * rooms) return fail(`${r.name} sleeps up to ${r.max_guests} guests per room. Add another room or choose a larger room.`);
     room = r;
@@ -111,8 +126,14 @@ export async function POST(request: Request) {
     if (tourDate < today) return fail("Tour date cannot be in the past.");
     checkIn = tourDate;
     checkOut = tourDate;
-    const { data } = await admin.from("properties").select("id, slug, name, bookable").eq("slug", propertySlug).maybeSingle();
-    const p = data as PropLite | null;
+    let p: PropLite | null = null;
+    if (admin) {
+      const { data } = await admin.from("properties").select("id, slug, name, bookable").eq("slug", propertySlug).maybeSingle();
+      p = data as PropLite | null;
+    } else {
+      const sp = seedProperties.find((x) => x.slug === propertySlug);
+      if (sp) p = { id: sp.slug, slug: sp.slug, name: sp.name, bookable: Boolean(sp.bookable) };
+    }
     if (!p?.bookable) return fail("That property is not accepting tour requests.");
     prop = p;
   }
@@ -123,8 +144,16 @@ export async function POST(request: Request) {
   if (kind === "activity" && ids.length === 0) return fail("Choose at least one tour.");
   const activityLines: { activity_id: string; activity_name: string; activity_date: string | null; pax: number; unit_price: number; price_unit: string; subtotal: number }[] = [];
   if (ids.length) {
-    const { data } = await admin.from("activities").select("id, name, price, price_unit, min_pax, max_pax, published, property_id").in("id", ids);
-    const byId = new Map(((data ?? []) as ActivityRowLite[]).map((a) => [a.id, a]));
+    let found: ActivityRowLite[] = [];
+    if (admin) {
+      const { data } = await admin.from("activities").select("id, name, price, price_unit, min_pax, max_pax, published, property_id").in("id", ids);
+      found = (data ?? []) as ActivityRowLite[];
+    } else {
+      found = seedActivities
+        .filter((a) => ids.includes(a.slug))
+        .map((a) => ({ id: a.slug, name: a.name, price: a.price, price_unit: a.priceUnit, min_pax: a.minPax, max_pax: a.maxPax, published: true, property_id: a.propertySlug }));
+    }
+    const byId = new Map(found.map((a) => [a.id, a]));
     for (const input of wanted) {
       const a = byId.get(str(input.activity_id, 60));
       if (!a || !a.published || a.property_id !== prop.id) return fail("One of the selected tours is not available.");
@@ -149,7 +178,7 @@ export async function POST(request: Request) {
   // --- Insert, retrying on a reference collision ---
   let reference = makeReference();
   let inserted: { id: string } | null = null;
-  for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+  for (let attempt = 0; admin && attempt < 3 && !inserted; attempt++) {
     const { data, error } = await admin
       .from("bookings")
       .insert({
@@ -180,9 +209,9 @@ export async function POST(request: Request) {
     }
     inserted = data;
   }
-  if (!inserted) return fail("We could not save your request. Please try again.", 500);
+  if (admin && !inserted) return fail("We could not save your request. Please try again.", 500);
 
-  if (activityLines.length) {
+  if (admin && inserted && activityLines.length) {
     const { error } = await admin.from("booking_activities").insert(activityLines.map((l) => ({ ...l, booking_id: inserted.id })));
     if (error) console.error("Booking activities insert failed", error.message);
   }
@@ -213,14 +242,18 @@ export async function POST(request: Request) {
   ].join("\n");
 
   const label = kind === "stay" ? "booking" : "tour";
-  await Promise.all([
-    sendEmail({ to: notify, subject: `New ${label} request ${reference} · ${prop.name}`, text: `${summary}\n\nManage it in the admin: /admin/bookings`, replyTo: guest.email }),
+  const [notified] = await Promise.all([
+    sendEmail({ to: notify, subject: `New ${label} request ${reference} · ${prop.name}`, text: `${summary}\n\n${admin ? "Manage it in the admin: /admin/bookings" : "This request is not stored online; reply to the guest from this email."}`, replyTo: guest.email }),
     sendEmail({
       to: guest.email,
       subject: `We received your ${label} request ${reference}`,
       text: `Hi ${guest.first_name},\n\nThank you for your ${label} request at ${prop.name}. Our team will confirm availability and payment details by email within one business day.\n\n${summary}\n\nStealth Land Corp`,
     }),
   ]);
+
+  if (!admin && !("ok" in notified)) {
+    return fail("We could not send your request right now. Please try again or email admin@stealthlandcorp.com.", 502);
+  }
 
   return NextResponse.json({ ok: true, reference, total, nights });
 }
