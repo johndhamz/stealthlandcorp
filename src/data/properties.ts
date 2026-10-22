@@ -254,7 +254,7 @@ export const properties: Property[] = [
     tagline: "Unwind where the island meets the sea.",
     sector: "hotel-leisure",
     region: "Palawan",
-    location: "Palawan, Philippines",
+    location: "Roxas, Palawan, Philippines",
     status: "in-development",
     featured: false,
     cardImage: "/images/properties/hotel-leisure.jpg",
